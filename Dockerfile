@@ -39,5 +39,7 @@ USER picoclaw
 # Run onboard to create initial directories and config
 RUN /usr/local/bin/picoclaw onboard
 
+EXPOSE 18790
+
 ENTRYPOINT ["picoclaw"]
 CMD ["gateway"]

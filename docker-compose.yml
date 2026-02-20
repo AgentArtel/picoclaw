@@ -1,8 +1,8 @@
 services:
-  # ─────────────────────────────────────────────
+  # -----------------------------------------
   # PicoClaw Agent (one-shot query)
-  #   docker compose run --rm picoclaw-agent -m "Hello"
-  # ─────────────────────────────────────────────
+  #   docker compose --profile agent run --rm picoclaw-agent -m "Hello"
+  # -----------------------------------------
   picoclaw-agent:
     build:
       context: .
@@ -11,16 +11,16 @@ services:
     profiles:
       - agent
     volumes:
-      - ./config/config.json:/home/picoclaw/.picoclaw/config.json:ro
+      - picoclaw-config:/home/picoclaw/.picoclaw
       - picoclaw-workspace:/home/picoclaw/.picoclaw/workspace
     entrypoint: ["picoclaw", "agent"]
     stdin_open: true
     tty: true
 
-  # ─────────────────────────────────────────────
-  # PicoClaw Gateway (Long-running Bot)
-  #   docker compose up picoclaw-gateway
-  # ─────────────────────────────────────────────
+  # -----------------------------------------
+  # PicoClaw Gateway (long-running HTTP API)
+  #   docker compose --profile gateway up picoclaw-gateway
+  # -----------------------------------------
   picoclaw-gateway:
     build:
       context: .
@@ -29,12 +29,21 @@ services:
     restart: unless-stopped
     profiles:
       - gateway
+    ports:
+      - "18790:18790"
     volumes:
-      # Configuration file
-      - ./config/config.json:/home/picoclaw/.picoclaw/config.json:ro
+      # Config directory - writable so admin endpoint can update config.json
+      - picoclaw-config:/home/picoclaw/.picoclaw
       # Persistent workspace (sessions, memory, logs)
       - picoclaw-workspace:/home/picoclaw/.picoclaw/workspace
+    environment:
+      # LLM API keys - set in .env or pass via shell
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      KIMI_API_KEY: ${KIMI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     command: ["gateway"]
 
 volumes:
+  picoclaw-config:
   picoclaw-workspace:
