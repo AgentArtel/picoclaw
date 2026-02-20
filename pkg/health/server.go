@@ -15,14 +15,15 @@ import (
 )
 
 type Server struct {
-	server    *http.Server
-	mux       *http.ServeMux
-	mu        sync.RWMutex
-	ready     bool
-	checks    map[string]Check
-	startTime time.Time
-	agentLoop *agent.AgentLoop
-	reloadFn  func(cfg *config.Config) error
+	server           *http.Server
+	mux              *http.ServeMux
+	mu               sync.RWMutex
+	ready            bool
+	checks           map[string]Check
+	startTime        time.Time
+	agentLoop        *agent.AgentLoop
+	reloadFn         func(cfg *config.Config) error
+	routesRegistered bool
 }
 
 // AdminConfigRequest is the payload for POST /v1/admin/config.
@@ -127,8 +128,11 @@ func (s *Server) SetAgentLoop(loop *agent.AgentLoop) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.agentLoop = loop
-	s.mux.HandleFunc("POST /v1/chat", s.chatHandler)
-	s.mux.HandleFunc("POST /v1/admin/config", s.adminConfigHandler)
+	if !s.routesRegistered {
+		s.mux.HandleFunc("POST /v1/chat", s.chatHandler)
+		s.mux.HandleFunc("POST /v1/admin/config", s.adminConfigHandler)
+		s.routesRegistered = true
+	}
 }
 
 func (s *Server) SetReloadFn(fn func(cfg *config.Config) error) {
