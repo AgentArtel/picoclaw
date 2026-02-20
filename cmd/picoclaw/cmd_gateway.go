@@ -180,12 +180,35 @@ func gatewayCmd() {
 
 	healthServer := health.NewServer(cfg.Gateway.Host, cfg.Gateway.Port)
 	healthServer.SetAgentLoop(agentLoop)
+	healthServer.SetReloadFn(func(newCfg *config.Config) error {
+		newProvider, newModelID, err := providers.CreateProvider(newCfg)
+		if err != nil {
+			return fmt.Errorf("create provider: %w", err)
+		}
+		if newModelID != "" {
+			newCfg.Agents.Defaults.Model = newModelID
+		}
+
+		newLoop := agent.NewAgentLoop(newCfg, msgBus, newProvider)
+		newLoop.SetChannelManager(channelManager)
+
+		agentLoop.Stop()
+		agentLoop = newLoop
+		healthServer.SetAgentLoop(newLoop)
+
+		go newLoop.Run(ctx)
+		logger.InfoCF("admin", "Config reloaded", map[string]interface{}{
+			"agents": len(newCfg.Agents.List),
+		})
+		return nil
+	})
 	go func() {
 		if err := healthServer.Start(); err != nil && err != http.ErrServerClosed {
 			logger.ErrorCF("health", "Health server error", map[string]interface{}{"error": err.Error()})
 		}
 	}()
 	fmt.Printf("✓ Health endpoints available at http://%s:%d/health and /ready\n", cfg.Gateway.Host, cfg.Gateway.Port)
+	fmt.Printf("✓ Admin API available at http://%s:%d/v1/admin/config\n", cfg.Gateway.Host, cfg.Gateway.Port)
 
 	go agentLoop.Run(ctx)
 

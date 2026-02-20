@@ -216,6 +216,24 @@ func (al *AgentLoop) ProcessDirect(ctx context.Context, content, sessionKey stri
 	return al.ProcessDirectWithChannel(ctx, content, sessionKey, "cli", "direct")
 }
 
+// ProcessDirectForAgent processes a message for a specific agent by ID,
+// bypassing the normal routing resolution.
+func (al *AgentLoop) ProcessDirectForAgent(ctx context.Context, agentID, content, sessionKey, channel, chatID string) (string, error) {
+	agent, ok := al.registry.GetAgent(agentID)
+	if !ok {
+		return "", fmt.Errorf("agent %q not found", agentID)
+	}
+	return al.runAgentLoop(ctx, agent, processOptions{
+		SessionKey:      sessionKey,
+		Channel:         channel,
+		ChatID:          chatID,
+		UserMessage:     content,
+		DefaultResponse: "I've completed processing but have no response to give.",
+		EnableSummary:   true,
+		SendResponse:    false,
+	})
+}
+
 func (al *AgentLoop) ProcessDirectWithChannel(ctx context.Context, content, sessionKey, channel, chatID string) (string, error) {
 	msg := bus.InboundMessage{
 		Channel:    channel,
