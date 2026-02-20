@@ -179,6 +179,7 @@ func gatewayCmd() {
 	}
 
 	healthServer := health.NewServer(cfg.Gateway.Host, cfg.Gateway.Port)
+	healthServer.SetAgentLoop(agentLoop)
 	go func() {
 		if err := healthServer.Start(); err != nil && err != http.ErrServerClosed {
 			logger.ErrorCF("health", "Health server error", map[string]interface{}{"error": err.Error()})

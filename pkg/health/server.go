@@ -7,14 +7,18 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/sipeed/picoclaw/pkg/agent"
 )
 
 type Server struct {
 	server    *http.Server
+	mux       *http.ServeMux
 	mu        sync.RWMutex
 	ready     bool
 	checks    map[string]Check
 	startTime time.Time
+	agentLoop *agent.AgentLoop
 }
 
 type Check struct {
@@ -33,6 +37,7 @@ type StatusResponse struct {
 func NewServer(host string, port int) *Server {
 	mux := http.NewServeMux()
 	s := &Server{
+		mux:       mux,
 		ready:     false,
 		checks:    make(map[string]Check),
 		startTime: time.Now(),
@@ -45,8 +50,8 @@ func NewServer(host string, port int) *Server {
 	s.server = &http.Server{
 		Addr:         addr,
 		Handler:      mux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 120 * time.Second,
 	}
 
 	return s
@@ -101,6 +106,60 @@ func (s *Server) RegisterCheck(name string, checkFn func() (bool, string)) {
 		Message:   msg,
 		Timestamp: time.Now(),
 	}
+}
+
+func (s *Server) SetAgentLoop(loop *agent.AgentLoop) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.agentLoop = loop
+	s.mux.HandleFunc("POST /v1/chat", s.chatHandler)
+}
+
+func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Message    string `json:"message"`
+		SessionKey string `json:"session_key"`
+		Channel    string `json:"channel,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Message == "" {
+		http.Error(w, `{"error":"message is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	s.mu.RLock()
+	loop := s.agentLoop
+	s.mu.RUnlock()
+	if loop == nil {
+		http.Error(w, `{"error":"agent not ready"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	channel := req.Channel
+	if channel == "" {
+		channel = "http"
+	}
+	sessionKey := req.SessionKey
+	if sessionKey == "" {
+		sessionKey = "http:default"
+	}
+
+	response, err := loop.ProcessDirectWithChannel(r.Context(), req.Message, sessionKey, channel, "api")
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"response":    response,
+		"session_key": sessionKey,
+	})
 }
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
