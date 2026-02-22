@@ -133,7 +133,7 @@ func DefaultConfig() *Config {
 			{
 				ModelName: "gemini-2.0-flash",
 				Model:     "gemini/gemini-2.0-flash-exp",
-				APIBase:   "https://generativelanguage.googleapis.com/v1beta",
+				APIBase:   "https://generativelanguage.googleapis.com/v1beta/openai",
 				APIKey:    "",
 			},
 

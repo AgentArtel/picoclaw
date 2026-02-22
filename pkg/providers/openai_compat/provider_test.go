@@ -170,6 +170,11 @@ func TestProviderChat_StripsGroqAndOllamaPrefixes(t *testing.T) {
 			input:     "deepseek/deepseek-chat",
 			wantModel: "deepseek-chat",
 		},
+		{
+			name:      "strips gemini prefix",
+			input:     "gemini/gemini-2.5-flash",
+			wantModel: "gemini-2.5-flash",
+		},
 	}
 
 	for _, tt := range tests {
@@ -273,5 +278,8 @@ func TestNormalizeModel_UsesAPIBase(t *testing.T) {
 	}
 	if got := normalizeModel("openrouter/auto", "https://openrouter.ai/api/v1"); got != "openrouter/auto" {
 		t.Fatalf("normalizeModel(openrouter) = %q, want %q", got, "openrouter/auto")
+	}
+	if got := normalizeModel("gemini/gemini-2.5-flash", "https://generativelanguage.googleapis.com/v1beta/openai"); got != "gemini-2.5-flash" {
+		t.Fatalf("normalizeModel(gemini) = %q, want %q", got, "gemini-2.5-flash")
 	}
 }

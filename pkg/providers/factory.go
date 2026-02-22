@@ -117,7 +117,7 @@ func resolveProviderSelection(cfg *config.Config) (providerSelection, error) {
 				sel.apiBase = cfg.Providers.Gemini.APIBase
 				sel.proxy = cfg.Providers.Gemini.Proxy
 				if sel.apiBase == "" {
-					sel.apiBase = "https://generativelanguage.googleapis.com/v1beta"
+					sel.apiBase = "https://generativelanguage.googleapis.com/v1beta/openai"
 				}
 			}
 		case "vllm":
@@ -245,7 +245,7 @@ func resolveProviderSelection(cfg *config.Config) (providerSelection, error) {
 			sel.apiBase = cfg.Providers.Gemini.APIBase
 			sel.proxy = cfg.Providers.Gemini.Proxy
 			if sel.apiBase == "" {
-				sel.apiBase = "https://generativelanguage.googleapis.com/v1beta"
+				sel.apiBase = "https://generativelanguage.googleapis.com/v1beta/openai"
 			}
 		case (strings.Contains(lowerModel, "glm") || strings.Contains(lowerModel, "zhipu") || strings.Contains(lowerModel, "zai")) && cfg.Providers.Zhipu.APIKey != "":
 			sel.apiKey = cfg.Providers.Zhipu.APIKey

@@ -102,6 +102,7 @@ func TestCreateProviderFromConfig_DefaultAPIBase(t *testing.T) {
 	}{
 		{"openai", "openai"},
 		{"groq", "groq"},
+		{"gemini", "gemini"},
 		{"openrouter", "openrouter"},
 		{"cerebras", "cerebras"},
 		{"qwen", "qwen"},
