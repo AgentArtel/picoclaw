@@ -279,7 +279,20 @@ func TestNormalizeModel_UsesAPIBase(t *testing.T) {
 	if got := normalizeModel("openrouter/auto", "https://openrouter.ai/api/v1"); got != "openrouter/auto" {
 		t.Fatalf("normalizeModel(openrouter) = %q, want %q", got, "openrouter/auto")
 	}
-	if got := normalizeModel("gemini/gemini-2.5-flash", "https://generativelanguage.googleapis.com/v1beta/openai"); got != "gemini-2.5-flash" {
-		t.Fatalf("normalizeModel(gemini) = %q, want %q", got, "gemini-2.5-flash")
+	// gemini-2.5-flash gets translated to gemini-2.0-flash for Google's OpenAI-compatible endpoint
+	if got := normalizeModel("gemini/gemini-2.5-flash", "https://generativelanguage.googleapis.com/v1beta/openai"); got != "gemini-2.0-flash" {
+		t.Fatalf("normalizeModel(gemini-2.5-flash) = %q, want %q", got, "gemini-2.0-flash")
+	}
+	// gemini-2.0-flash should pass through unchanged
+	if got := normalizeModel("gemini/gemini-2.0-flash", "https://generativelanguage.googleapis.com/v1beta/openai"); got != "gemini-2.0-flash" {
+		t.Fatalf("normalizeModel(gemini-2.0-flash) = %q, want %q", got, "gemini-2.0-flash")
+	}
+	// Without prefix, should also translate when using Google's endpoint
+	if got := normalizeModel("gemini-2.5-pro", "https://generativelanguage.googleapis.com/v1beta/openai"); got != "gemini-2.0-flash" {
+		t.Fatalf("normalizeModel(gemini-2.5-pro no prefix) = %q, want %q", got, "gemini-2.0-flash")
+	}
+	// Non-Google endpoint should NOT translate
+	if got := normalizeModel("gemini-2.5-flash", "https://api.openrouter.ai/v1"); got != "gemini-2.5-flash" {
+		t.Fatalf("normalizeModel(gemini on openrouter) = %q, want %q", got, "gemini-2.5-flash")
 	}
 }

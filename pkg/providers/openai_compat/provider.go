@@ -219,9 +219,25 @@ func parseResponse(body []byte) (*LLMResponse, error) {
 	}, nil
 }
 
+// geminiOpenAIModelMap translates Gemini model names that don't work on
+// Google's OpenAI-compatible endpoint to working equivalents.
+// The native Gemini SDK supports these names, but the OpenAI-compatible
+// endpoint at generativelanguage.googleapis.com/v1beta/openai does not.
+var geminiOpenAIModelMap = map[string]string{
+	"gemini-2.5-flash":      "gemini-2.0-flash",
+	"gemini-2.5-pro":        "gemini-2.0-flash",
+	"gemini-2.5-flash-lite": "gemini-2.0-flash-lite",
+}
+
 func normalizeModel(model, apiBase string) string {
 	idx := strings.Index(model, "/")
 	if idx == -1 {
+		// No prefix — apply Gemini model translation if hitting Google's endpoint
+		if strings.Contains(strings.ToLower(apiBase), "generativelanguage.googleapis.com") {
+			if mapped, ok := geminiOpenAIModelMap[model]; ok {
+				return mapped
+			}
+		}
 		return model
 	}
 
@@ -232,7 +248,14 @@ func normalizeModel(model, apiBase string) string {
 	prefix := strings.ToLower(model[:idx])
 	switch prefix {
 	case "moonshot", "nvidia", "groq", "ollama", "deepseek", "google", "gemini", "openrouter", "zhipu":
-		return model[idx+1:]
+		stripped := model[idx+1:]
+		// Apply Gemini model translation for Google's OpenAI-compatible endpoint
+		if strings.Contains(strings.ToLower(apiBase), "generativelanguage.googleapis.com") {
+			if mapped, ok := geminiOpenAIModelMap[stripped]; ok {
+				return mapped
+			}
+		}
+		return stripped
 	default:
 		return model
 	}
